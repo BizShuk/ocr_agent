@@ -1,0 +1,24 @@
+{
+  "domain": {
+    "classify": {
+      "provider": "minimax",
+      "model": "MiniMax-M3",
+      "timeout": "10m",
+      "source": "~/projects/default/pkg/receipts/tmp"
+    },
+    "general": {
+      "provider": "minimax",
+      "model": "MiniMax-M3",
+      "timeout": "10m",
+      "source": "~/projects/default/pkg/receipts/general/tmp",
+      "target": "~/projects/default/pkg/receipts/general"
+    },
+    "medical": {
+      "provider": "minimax",
+      "model": "MiniMax-M3",
+      "timeout": "10m",
+      "source": "~/projects/default/pkg/receipts/medical/tmp",
+      "target": "~/projects/default/pkg/receipts/medical"
+    }
+  }
+}
