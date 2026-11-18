@@ -12,6 +12,6 @@ mkdir -p "$config_root/data" "$config_root/logs" "$project_root/tmp"
 ln -sfn "$config_root" "$project_root/tmp/config"
 
 cd "$project_root"
-go run . config default --merge
+go run . config default
 
 printf 'ocr_agent config link: %s -> %s\n' "$project_root/tmp/config" "$config_root"

@@ -4,7 +4,7 @@ go 1.26.6
 
 require (
 	github.com/bizshuk/agentsdk v0.0.63
-	github.com/bizshuk/gosdk v1.3.25
+	github.com/bizshuk/gosdk v1.8.5
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0

@@ -4,8 +4,8 @@ github.com/bahlo/generic-list-go v0.2.0 h1:5sz/EEAK+ls5wF+NeqDpk5+iNdMDXrh3z3nPn
 github.com/bahlo/generic-list-go v0.2.0/go.mod h1:2KvAjgMlE5NNynlg/5iLrrCCZ2+5xWbdbCW3pNTGyYg=
 github.com/bizshuk/agentsdk v0.0.63 h1:UG6UCZor1PO2pYN0baEqODb5+mcA8y07LXy6b4luOfg=
 github.com/bizshuk/agentsdk v0.0.63/go.mod h1:QkIQwKCNrwfprmdbNHJ/OY4NSiJ6CSYVi8NJNxSk6i8=
-github.com/bizshuk/gosdk v1.3.25 h1:+NkNpwDJxKCOItOu+JBTzk1Mgk9xMHj38QXALGViJHw=
-github.com/bizshuk/gosdk v1.3.25/go.mod h1:+AgNjTvCaUjM9rGNCb7BVm+0V3kNCRAF19OaEFjFW9c=
+github.com/bizshuk/gosdk v1.8.5 h1:fRp9MMTeTTK/G0p0L9hotIriUGYIPmLFeVuhfefwAhc=
+github.com/bizshuk/gosdk v1.8.5/go.mod h1:EqyGgu1mgQ2JGFglktrR+8oaDJZwAKz1ABk4mu4V2eM=
 github.com/buger/jsonparser v1.1.2 h1:frqHqw7otoVbk5M8LlE/L7HTnIq2v9RX6EJ48i9AxJk=
 github.com/buger/jsonparser v1.1.2/go.mod h1:6RYKKt7H4d4+iWqouImQ9R2FZql3VbhNgx27UK13J/0=
 github.com/coder/websocket v1.8.15 h1:6B2JPeOGlpff2Uz6vOEH1Vzpi0iUz20A+lPVhPHtNUA=
