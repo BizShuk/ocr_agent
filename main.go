@@ -16,10 +16,9 @@ import (
 )
 
 // defaultSettings is what `ocr_agent config default` writes into
-// ~/.config/ocr_agent/settings.json. It lives at the repo root because
-// go:embed cannot read a parent directory.
+// ~/.config/ocr_agent/settings.json.
 //
-//go:embed settings.example.json
+//go:embed config/example/settings.example.json
 var defaultSettings []byte
 
 func main() {

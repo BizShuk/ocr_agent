@@ -6,8 +6,8 @@
 
 ```tree
 ocr_agent/
-├── main.go                 # config.Default + 內嵌 settings.example.json -> cmd.ExecuteContext
-├── settings.example.json   # `ocr_agent config default` 的 seed (全 minimax / MiniMax-M3)
+├── main.go                 # config.Default + 內嵌 config/example/settings.example.json -> cmd.ExecuteContext
+├── config/example/settings.example.json  # `ocr_agent config default` 的 seed (全 minimax / MiniMax-M3)
 ├── cmd/                    # cobra: 旗標、domain 設定解析、輸出; 不做歸檔決策
 │   ├── root.go             # RootCmd, 掛 gosdk ConfigCmd 與各 domain 命令
 │   ├── classify.go         # classify domain, 辨識影像類型並路由到下游 domain 的 source

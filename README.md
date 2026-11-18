@@ -51,7 +51,7 @@ credential 只從環境變數或 `~/.config/ocr_agent/.env` 取得。
 ## 4. 設定 (Configuration)
 
 設定檔為 `~/.config/ocr_agent/settings.json`，首次以 `ocr_agent config default`（或 `npm run run:setup`）
-從內嵌的 [`settings.example.json`](settings.example.json) 產生。`ocr_agent config --source` 顯示每個值的來源。
+從內嵌的 [`settings.example.json`](config/example/settings.example.json) 產生。`ocr_agent config --source` 顯示每個值的來源。
 
 ```json
 {
