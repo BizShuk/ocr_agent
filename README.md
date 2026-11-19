@@ -110,7 +110,7 @@ pm2 排程由資料 repo `~/projects/default/ecosystem.config.js` 擁有，每�
 ```bash
 npm run test     # go test ./...
 npm run lint     # gofmt + go vet
-npm run deploy   # go install . -> ocr_agent on PATH
+npm run install  # go install . -> ocr_agent on PATH
 ```
 
 技術結構見 [AGENTS.md](AGENTS.md)。
