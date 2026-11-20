@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # run:setup — 冪等 (idempotent) 的前置作業，不啟動任何服務。
 # 設定的唯一位置是 ~/.config/ocr_agent；repo 內的 tmp/config 只是指過去的 symlink。
-# 既有的 settings.json 只補缺少的 key，不覆寫已調整過的 domain 設定。
+# 既有的 settings.json 只補缺少的 key，不覆寫已調整過的 tasks 設定。
 
 set -euo pipefail
 

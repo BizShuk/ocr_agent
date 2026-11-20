@@ -1,24 +1,78 @@
 {
-  "domain": {
-    "classify": {
+  "tasks": [
+    {
+      "name": "inbox",
+      "description": "Identify what kind of document this image is and put it in metadata as {\"category\": \"general_receipt\" | \"medical_receipt\" | \"non_receipt\", \"summary\": \"one sentence\"}.\n\nRules:\n- \"medical_receipt\": Receipts, bills, invoices from clinics, TCM (Traditional Chinese Medicine) practitioners, hospitals, dental, pharmacies, or any medical diagnosis document (like Medical Certificate / MC). Also include bank transfer screenshots where the payee is a medical clinic or doctor (e.g. Great Wall TCM, Family Clinic, etc.).\n- \"general_receipt\": Any standard retail, dining, food court, supermarket, taxi, transport receipts, or general banking transfer screenshots to non-medical payees.\n- \"non_receipt\": Any image that is not a receipt, bill, invoice, medical certificate, or payment transaction slip.",
+      "type": "classify",
       "provider": "minimax",
       "model": "MiniMax-M3",
       "timeout": "10m",
-      "source": "~/projects/default/pkg/receipts/tmp"
+      "source": "~/projects/default/pkg/receipts/tmp",
+      "targets": [
+        {
+          "name": "general_inbox",
+          "description": "Ordinary receipts not yet extracted: retail, dining, food court, supermarket, taxi, transport, or bank transfers to non-medical payees. Use for a classify result of general_receipt.",
+          "path": "~/projects/default/pkg/receipts/general/tmp"
+        },
+        {
+          "name": "medical_inbox",
+          "description": "Medical documents not yet extracted: clinic, TCM, hospital, dental or pharmacy receipts, medical certificates (MC), or bank transfers to a clinic or doctor. Use for a classify result of medical_receipt.",
+          "path": "~/projects/default/pkg/receipts/medical/tmp"
+        },
+        {
+          "name": "special_inbox",
+          "description": "Documents that are not receipts but are records worth keeping, such as letters, statements, contracts or certificates. Not for ordinary photos or screenshots.",
+          "path": "~/projects/default/pkg/receipts/special/tmp"
+        }
+      ]
     },
-    "general": {
+    {
+      "name": "general",
+      "description": "Analyze this general receipt image. This is a general receipt from retail, dining, food, travel, or supermarket.\n\nPut these fields in metadata:\n{\n  \"category\": \"general_receipt\",\n  \"date\": \"YYYY-MM-DD\",\n  \"time\": \"HH:MM\",\n  \"merchant\": \"merchant_name_lowercase_underscore_separated\",\n  \"merchant_uen\": \"uen_or_na\",\n  \"payment_method\": \"payment_method\",\n  \"reference_no\": \"reference_number_or_na\",\n  \"items\": [\n    {\n      \"name\": \"string\",\n      \"qty\": 1,\n      \"unit_price\": 0.00,\n      \"total_price\": 0.00\n    }\n  ],\n  \"currency\": \"lowercase_3_letter_currency_code\",\n  \"subtotal\": 0.00,\n  \"gst\": 0.00,\n  \"rounding\": 0.00,\n  \"total_amount\": 0.00\n}\n\nRules:\n- category: MUST be \"general_receipt\".\n- date: YYYY-MM-DD (Gregorian), extract the transaction date.\n- Taiwan receipts print the year in the 民國 (ROC) era: a 2-3 digit year such as \"115/02/23\", \"1150223\" or \"民國115年2月23日\". Convert it by ADDING 1911 (115 -> 2026, 104 -> 2015). Never read a 3-digit era year as a Gregorian year.\n- time: HH:MM or \"N/A\" if not visible.\n- merchant: The payee or merchant name, MUST be formatted as lowercase, words separated by underscores (e.g. \"md40\", \"ah_luck_six\", \"citadines_kitchens\").\n- merchant_uen: The UEN/Registration ID of the merchant (if visible, e.g. \"201725438K\") or \"N/A\".\n- payment_method: The payment method (e.g. \"PayNow\", \"Visa\", \"NETS\", \"Cash\") or \"N/A\".\n- reference_no: The transaction reference number, STAN ID, or trace ID (if visible) or \"N/A\".\n- items: An array containing each purchased item. If individual items are not listed (like in bank transfer slips), return an empty array `[]`.\n- currency: lowercase 3-letter currency code (e.g. \"sgd\", \"usd\", \"twd\").\n- subtotal: The subtotal amount before tax/GST (if visible as a number, e.g. 12.50) or 0.00.\n- gst: The tax or GST amount (if visible, e.g. 1.13) or 0.00.\n- rounding: The rounding adjustment (if visible, e.g. -0.02) or 0.00.\n- total_amount: The final paid amount (decimal string or number, no currency symbol, e.g. 12.50).",
+      "type": "date",
       "provider": "minimax",
       "model": "MiniMax-M3",
       "timeout": "10m",
       "source": "~/projects/default/pkg/receipts/general/tmp",
-      "target": "~/projects/default/pkg/receipts/general"
+      "targets": [
+        {
+          "name": "general_archive",
+          "description": "Extracted ordinary receipts that have a merchant, date and amount.",
+          "path": "~/projects/default/pkg/receipts/general/{yyyy}/{mm}"
+        }
+      ]
     },
-    "medical": {
+    {
+      "name": "medical",
+      "description": "Analyze this medical receipt or medical certificate image. This is from a clinic, doctor, Traditional Chinese Medicine (TCM) practitioner, hospital, or pharmacy.\n\nPut these fields in metadata:\n{\n  \"category\": \"medical_receipt\",\n  \"date\": \"YYYY-MM-DD\",\n  \"time\": \"HH:MM\",\n  \"clinic_name\": \"clinic_name_lowercase_underscore_separated\",\n  \"clinic_uen\": \"uen_or_na\",\n  \"patient_name\": \"patient_name\",\n  \"patient_id\": \"patient_id_or_na\",\n  \"doctor_name\": \"doctor_name_or_na\",\n  \"doctor_mcr\": \"doctor_mcr_or_na\",\n  \"invoice_no\": \"invoice_no_or_na\",\n  \"receipt_no\": \"receipt_no_or_na\",\n  \"payment_method\": \"payment_method\",\n  \"items\": [\n    {\n      \"name\": \"string\",\n      \"qty\": 1,\n      \"unit_price\": 0.00,\n      \"total_price\": 0.00\n    }\n  ],\n  \"currency\": \"lowercase_3_letter_currency_code\",\n  \"subtotal\": 0.00,\n  \"gst\": 0.00,\n  \"rounding\": 0.00,\n  \"total_amount\": 0.00,\n  \"is_medical_certificate\": true/false,\n  \"mc_start_date\": \"YYYY-MM-DD or null\",\n  \"mc_end_date\": \"YYYY-MM-DD or null\",\n  \"mc_days\": 1 or null,\n  \"diagnosis\": \"string or null\"\n}\n\nRules:\n- category: MUST be \"medical_receipt\".\n- date: YYYY-MM-DD (Gregorian). Extract the invoice date or the date the document was issued (e.g. 看診日期, 就醫日期, 開立日期).\n- Taiwan documents print the year in the 民國 (ROC) era: a 2-3 digit year such as \"115/02/23\", \"1150223\" or \"民國115年2月23日\". Convert it by ADDING 1911 (115 -> 2026, 104 -> 2015). Never read a 3-digit era year as a Gregorian year, and never reuse the patient birth year (生日, also printed in ROC era) as the visit date.\n- time: HH:MM or \"N/A\" if not visible.\n- clinic_name: The clinic or hospital name EXACTLY as printed in the document header, transliterated; never guess a sibling branch of the same hospital group. MUST be formatted as lowercase, words separated by underscores (e.g. \"great_wall_tcm\", \"my_family_clinic\", \"wanfang_hospital\").\n- clinic_uen: The UEN/Registration ID of the clinic (if visible, e.g. \"201725438K\") or \"N/A\". A Taiwan 批價序號 / 收據號碼 / 醫令序號 is a document serial number, not a UEN — put it in receipt_no and return \"N/A\" here.\n- patient_name: The patient name (if visible, e.g. \"Liu Teng-Yuan\") or \"N/A\". On Chinese documents this is the 姓名 / 病患姓名 field, NOT the 醫師 field.\n- patient_id: The patient's NRIC/ID number (if visible, e.g. \"S8669082I\") or \"N/A\". On Taiwan documents use the 身分證 number; if only 病歷號 is printed use that.\n- doctor_name: The doctor/physician/consultant's name (if visible) or \"N/A\". On Chinese documents this is the 醫師 / 主治醫師 field.\n- doctor_mcr: The doctor's Medical Council Registration (MCR) number (if visible, e.g. \"M04788J\") or \"N/A\". A Taiwan 病歷號 belongs to the patient, never here.\n- invoice_no: The invoice number (if visible, e.g. \"IN74687\") or \"N/A\".\n- receipt_no: The receipt number (if visible, e.g. \"RT-TLH0073009\") or \"N/A\".\n- payment_method: The payment method (e.g. \"PayNow\", \"NETS\", \"Visa\", \"Cash\") or \"N/A\".\n- items: An array containing medical items, consultation fees, or prescriptions. For Medical Certificates or bank slips, this can be empty `[]`.\n- currency: lowercase 3-letter currency code (e.g. \"sgd\", \"usd\", \"twd\").\n- subtotal: Subtotal amount before GST (if visible, default 0.00).\n- gst: GST amount (if visible, default 0.00).\n- rounding: Rounding adjustments (if visible, default 0.00).\n- total_amount: The final amount paid. If this is a Medical Certificate (MC) with no charge, or a consultation tax invoice showing $0.00, return 0.00.\n- is_medical_certificate: true if the document is a Medical Certificate (MC/Unfit for work certificate). otherwise false.\n- mc_start_date: YYYY-MM-DD, the start date of medical leave (if this is an MC) or null.\n- mc_end_date: YYYY-MM-DD, the end date of medical leave (if this is an MC) or null.\n- mc_days: The number of days of medical leave (if this is an MC) or null.\n- diagnosis: The diagnosis or reason for consultation (if visible, e.g. \"左侧落枕3天\" or \"左膝内侧痛。\") or \"N/A\".",
+      "type": "date",
       "provider": "minimax",
       "model": "MiniMax-M3",
       "timeout": "10m",
       "source": "~/projects/default/pkg/receipts/medical/tmp",
-      "target": "~/projects/default/pkg/receipts/medical"
+      "targets": [
+        {
+          "name": "medical_archive",
+          "description": "Extracted medical receipts or medical certificates that have a clinic and date.",
+          "path": "~/projects/default/pkg/receipts/medical/{yyyy}/{mm}"
+        }
+      ]
+    },
+    {
+      "name": "special",
+      "description": "Analyze this document image. It is a record worth keeping that is not a receipt, such as a letter, bank or utility statement, contract, insurance policy, tax notice or certificate.\n\nPut these fields in metadata:\n{\n  \"date\": \"YYYY-MM-DD\",\n  \"document_type\": \"letter | statement | contract | insurance | tax | certificate | other\",\n  \"issuer\": \"organisation or person that issued the document\",\n  \"title\": \"the document's own title or subject line\",\n  \"summary\": \"one sentence on what the document is about\"\n}\n\nRules:\n- date: the date printed on the document (issue, statement or letter date), not today's date.\n- issuer and title: copy them as printed; use \"N/A\" when not visible.",
+      "type": "date",
+      "provider": "minimax",
+      "model": "MiniMax-M3",
+      "timeout": "10m",
+      "source": "~/projects/default/pkg/receipts/special/tmp",
+      "targets": [
+        {
+          "name": "special_archive",
+          "description": "Documents worth keeping that are not receipts, filed by their own date.",
+          "path": "~/projects/default/pkg/receipts/special/{yyyy}/{mm}"
+        }
+      ]
     }
-  }
+  ]
 }

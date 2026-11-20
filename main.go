@@ -1,5 +1,5 @@
 // Command ocr_agent classifies document images with a vision model and
-// archives them per domain. Commands live in cmd/, domain logic in svc/.
+// files them per configured task. Commands live in cmd/, domain logic in svc/.
 package main
 
 import (
