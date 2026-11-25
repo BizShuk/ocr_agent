@@ -179,7 +179,7 @@ func TestDateMovesImageAndSidecarToDatedFolder(t *testing.T) {
 // Per-image failures go to stderr; progress and the summary to stdout.
 func TestFailuresGoToStderr(t *testing.T) {
 	root := layout(t)
-	stubCalls["general-m"] = map[string]any{"target": "general_archive", "metadata": map[string]any{"merchant": "no date"}}
+	stubCalls["general-m"] = map[string]any{"target": "general_archive", "metadata": map[string]any{"date": "not a date"}}
 	writeImage(t, filepath.Join(root, "general", "tmp", "bad.jpg"))
 
 	out, errOut, err := execute(t, task.TYPE_DATE, filepath.Join(root, "general", "tmp"), cmdinternal.RunOptions{})

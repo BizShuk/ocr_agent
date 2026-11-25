@@ -59,6 +59,24 @@ model / provider 沒有 CLI 覆寫：task 設定是唯一來源。
 - 沒有 `mv` 呼叫 = 留在原處；未知 target、缺 date、多次呼叫 = 該檔失敗。dry-run 照常呼叫模型並解析目的地，只略過搬移。
 - agentSDK 的 builtin `mv`（任意路徑）不用：它不處理 `_2` 同名後綴與 sidecar 的原子提交；名稱同為 `mv` 但不會進同一個 registry。
 
+### 空回應是重試，不是 skip
+
+`Pipeline.ask` 取回回應後判斷「沒有 tool call 也沒有任何文字」：那是 provider 掉回應
+（HTTP 200、`stop_reason: tool_use`、`content: null`），不是模型拒絕。這種回應重試最多 `MAX_ATTEMPTS`（3）次；
+用盡仍空則該檔失敗。若當成 skip，該檔會留在原地、每晚重跑一次、每晚失敗一次，累積成本無上限。
+
+### 日期契約 (Date Contract)
+
+prompt 與 validator 的允許值集合必須逐欄對齊，否則某個 item 永遠歸不了檔。
+
+- **格式**：新加坡／台灣／香港／馬來西亞一律 DD/MM/YYYY（`12/01/2026` = 1 月 12 日），美國才是 MM/DD/YYYY。
+  這條寫在 `Prompt` 的 `METADATA_DATED`，適用於所有 date task；模型預設假設 MM/DD/YYYY，沒講就會讀錯。
+- **逃生門**：文件上完全沒有日期時模型填 `"N/A"`；`svc/date.IsMissing` 認這個值，
+  `mv.resolveDay` 改用照片時間戳（`svc/imagefile.ModTime`）當歸檔日，並在 sidecar 記 `date_source`。
+- **缺 date 欄位仍是錯誤**：模型沒給 `date` 這個欄位不是「文件沒印日期」，是模型沒遵守格式，照樣失敗。
+- **未來日期仍是錯誤**：validator 不放寬；放寬會讓真的未來日期也過關。日期讀錯要靠 prompt 規則修，不靠寬容 validator。
+- `date_source` 記在 sidecar：`document` = 文件上印的，`file_mtime` = 照片時間戳。讀 sidecar 的人分得清日期來源。
+
 ### Targets 與 placeholder
 
 - `{yyyy}` / `{mm}` 取代舊的固定 `<target>/<YYYY>/<MM>/`；`Target.Root()` 是 placeholder 之前的固定前綴，`EnsureWithin` 以它為界。

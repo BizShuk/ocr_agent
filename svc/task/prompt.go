@@ -9,7 +9,7 @@ import (
 
 // Metadata formats the prompt states per contract.
 const (
-	METADATA_DATED = `a JSON object with the fields the instructions above ask for. It MUST include "date" as YYYY-MM-DD (the document's own date; a Taiwan ROC year such as 115-02-23 is accepted). It is saved next to the image as its JSON sidecar.`
+	METADATA_DATED = `a JSON object with the fields the instructions above ask for. It MUST include "date" as YYYY-MM-DD (the document's own date; a Taiwan ROC year such as 115-02-23 is accepted). Singapore, Taiwan, Hong Kong and Malaysia print dates day first (DD/MM/YYYY): "12/01/2026" is 12 January 2026, not 1 December 2026. If the document prints no date at all, answer "N/A" and the image is filed under the photo's own date instead. It is saved next to the image as its JSON sidecar.`
 	METADATA_PLAIN = `a short JSON object describing the document, for example {"category": "...", "summary": "..."}. It is only logged.`
 )
 

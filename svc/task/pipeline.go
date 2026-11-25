@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/bizshuk/agentsdk/core"
 	"github.com/bizshuk/agentsdk/tool"
@@ -14,6 +15,12 @@ import (
 
 // MAX_TOKENS caps the reply: one tool call carrying the metadata.
 const MAX_TOKENS = 4096
+
+// MAX_ATTEMPTS is how many times one image is offered to the model before
+// the run gives up on it. A provider may answer HTTP 200 with
+// stop_reason "tool_use" and an empty body — the payload was dropped
+// upstream, not refused by the model — so the same image is asked again.
+const MAX_ATTEMPTS = 3
 
 // Pipeline processes images for one task. The prompt and the mv tool spec
 // are built once; each image is one model call.
@@ -59,21 +66,10 @@ func (p Pipeline) Process(ctx context.Context, source string, apply bool) (Outco
 	if err != nil {
 		return Outcome{}, err
 	}
-	reply, err := p.provider.Generate(ctx, core.ModelRequest{
-		MaxTokens: MAX_TOKENS,
-		Tools:     []core.ToolSpec{p.spec},
-		Messages: []core.Message{{
-			Role: core.ROLE_USER,
-			Parts: []core.Part{
-				{Kind: core.PART_KIND_PLAIN_TEXT, Text: p.prompt},
-				{Kind: core.PART_KIND_IMAGE, Image: img.Data, ImageMIME: img.MIME},
-			},
-		}},
-	})
+	reply, err := p.ask(ctx, img)
 	if err != nil {
-		return Outcome{}, fmt.Errorf("model request: %w", err)
+		return Outcome{}, err
 	}
-	reply = reply.NormalizeContent()
 
 	var calls []core.ToolCall
 	for _, call := range reply.ToolCalls {
@@ -104,4 +100,41 @@ func (p Pipeline) Process(ctx context.Context, source string, apply bool) (Outco
 		return Outcome{}, fmt.Errorf("decode %s result: %w", TOOL_NAME, err)
 	}
 	return out, nil
+}
+
+// ask sends the image to the model and returns its reply.
+//
+// A reply that carries neither a tool call nor any text is not a decision by
+// the model — it is a body the provider dropped. The image is asked again
+// instead of being left in place with no reason, which would have it retried
+// every night and fail every night.
+func (p Pipeline) ask(ctx context.Context, img imagefile.Image) (core.ModelResult, error) {
+	var last core.ModelResult
+	for attempt := 1; attempt <= MAX_ATTEMPTS; attempt++ {
+		reply, err := p.provider.Generate(ctx, core.ModelRequest{
+			MaxTokens: MAX_TOKENS,
+			Tools:     []core.ToolSpec{p.spec},
+			Messages: []core.Message{{
+				Role: core.ROLE_USER,
+				Parts: []core.Part{
+					{Kind: core.PART_KIND_PLAIN_TEXT, Text: p.prompt},
+					{Kind: core.PART_KIND_IMAGE, Image: img.Data, ImageMIME: img.MIME},
+				},
+			}},
+		})
+		if err != nil {
+			return core.ModelResult{}, fmt.Errorf("model request: %w", err)
+		}
+		last = reply.NormalizeContent()
+		if !isEmpty(last) {
+			return last, nil
+		}
+	}
+	return core.ModelResult{}, fmt.Errorf("model returned an empty reply %d times", MAX_ATTEMPTS)
+}
+
+// isEmpty reports a reply with neither a tool call nor any text: the model
+// produced nothing at all.
+func isEmpty(reply core.ModelResult) bool {
+	return len(reply.ToolCalls) == 0 && strings.TrimSpace(reply.Text) == ""
 }

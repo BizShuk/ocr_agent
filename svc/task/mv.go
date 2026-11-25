@@ -12,6 +12,7 @@ import (
 	"github.com/bizshuk/agentsdk/tool"
 	"github.com/bizshuk/ocr_agent/svc/date"
 	"github.com/bizshuk/ocr_agent/svc/filing"
+	"github.com/bizshuk/ocr_agent/svc/imagefile"
 	"github.com/bizshuk/ocr_agent/svc/target"
 )
 
@@ -85,10 +86,13 @@ func (m *mv) execute(_ context.Context, a MvArgs) (MvOutput, error) {
 	if !ok {
 		return MvOutput{}, fmt.Errorf("unknown target %q", a.Target)
 	}
+	if a.Metadata == nil {
+		a.Metadata = map[string]any{}
+	}
 	day := ""
 	if m.contract.Dated {
 		var err error
-		if day, err = date.Parse(a.Metadata[date.FIELD], time.Now()); err != nil {
+		if day, err = m.resolveDay(a.Metadata); err != nil {
 			return MvOutput{}, fmt.Errorf("metadata: %w", err)
 		}
 		a.Metadata[date.FIELD] = day
@@ -110,4 +114,36 @@ func (m *mv) execute(_ context.Context, a MvArgs) (MvOutput, error) {
 		err = filing.Move(m.source, destination)
 	}
 	return out, err
+}
+
+// resolveDay turns the model's date into the day the image is filed under.
+//
+// A document that prints no date at all — a bank transfer screenshot, say —
+// is filed under the photo's own timestamp: the model says "N/A", and the
+// day the picture was taken is the best date the document can offer. The
+// source of the day is recorded in the sidecar so a reader can tell the two
+// apart.
+func (m *mv) resolveDay(metadata map[string]any) (string, error) {
+	value, ok := metadata[date.FIELD]
+	if !ok {
+		return "", fmt.Errorf("%s must use YYYY-MM-DD", date.FIELD)
+	}
+	if !date.IsMissing(value) {
+		day, err := date.Parse(value, time.Now())
+		if err != nil {
+			return "", err
+		}
+		metadata[date.SOURCE_FIELD] = date.SOURCE_DOCUMENT
+		return day, nil
+	}
+	stamp, err := imagefile.ModTime(m.source)
+	if err != nil {
+		return "", err
+	}
+	day := stamp.Format("2006-01-02")
+	if parsed, err := date.Parse(day, time.Now()); err == nil {
+		day = parsed
+	}
+	metadata[date.SOURCE_FIELD] = date.SOURCE_FILE_MTIME
+	return day, nil
 }

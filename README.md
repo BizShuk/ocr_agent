@@ -16,12 +16,19 @@
 | `type` / subcommand | 讀 `source` | `metadata` 要求 | 搬到所選 target 的檔案 |
 | --- | --- | --- | --- |
 | `classify` | 遞迴 | 自由的 JSON object，只記在 log | 原檔 |
-| `date` | flat | 必須有 `date`（`YYYY-MM-DD`，民國年 +1911，不可未來） | 原檔 + `metadata` 當 `.json` sidecar，進 target 的 `{yyyy}/{mm}` |
+| `date` | flat | 必須有 `date`（`YYYY-MM-DD`，民國年 +1911，不可未來）；文件沒印日期時填 `"N/A"` | 原檔 + `metadata` 當 `.json` sidecar，進 target 的 `{yyyy}/{mm}` |
 
 每張影像一次模型呼叫，用該 task 的 model：送出影像、組好的 prompt 與 agentSDK 的 `mv` tool。
 prompt 由 task `description` + target 清單 + 該 type 的結果格式組成；模型以一次
 `mv({"target": "<name>", "metadata": {...}})` 回答。`target` 是 target name 的 enum，模型只能挑名稱，
 搬哪個檔與實際路徑由程式決定。模型沒有呼叫 `mv` 時檔案留在原處，log 印出模型的說明。
+
+日期格式：新加坡、台灣、香港、馬來西亞的收據一律 **DD/MM/YYYY**（`12/01/2026` 是 1 月 12 日），
+美國才是 MM/DD/YYYY。這條規則寫在 `date` 型別的結果格式裡，適用於每個 date task。
+
+文件上完全沒有日期時（例如只顯示金額的轉帳截圖），模型填 `"N/A"`；程式改用**照片本身的時間戳**
+歸檔，並在 sidecar 的 `date_source` 記錄 `"file_mtime"`（文件上有日期時記 `"document"`），
+讓日後讀 sidecar 的人分得清日期的來源。
 
 同一 type 可以有多個 task。預設 seed 有一個 classify 與三個 date task：
 
@@ -91,7 +98,10 @@ credential 只從環境變數或 `~/.config/ocr_agent/.env` 取得。
 ## 5. 歸檔規則 (Filing Rules)
 
 - 檔名保留原名；同名時加 `_2`、`_3`；image 與同 stem 的 `.json` sidecar 都不覆寫。
-- `date` task 的 sidecar 是 `mv` 的 `metadata`（`date` 已正規化成西元），另加 `original_filename`、`renamed_to`。
+- `date` task 的 sidecar 是 `mv` 的 `metadata`（`date` 已正規化成西元），另加 `original_filename`、`renamed_to`、`date_source`。
+- 模型回覆的 `date` 若為 `"N/A"`（文件沒印日期），歸檔日改用照片時間戳，`date_source` 記 `file_mtime`；其餘記 `document`。
+- provider 可能回 HTTP 200 但 `content` 為 null（payload 被上游丟掉）。這種空回應會重試最多 3 次；
+  仍空則該檔失敗，不會被當成「模型沒選 target」而留在原地每晚重跑。
 - 任一檔案失敗時該 task 以 exit code `1` 結束，但會繼續處理其他檔案與其他 task。
 - sidecar 寫入失敗時，影像會搬回原 `source`。
 

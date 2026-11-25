@@ -86,6 +86,16 @@ func Load(ctx context.Context, path string) (Image, error) {
 	return Image{Data: data, MIME: mime}, nil
 }
 
+// ModTime returns the file's last-modified time — for a phone photo, when
+// it was taken. It is the date of a document that prints none.
+func ModTime(path string) (time.Time, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("stat %s: %w", filepath.Base(path), err)
+	}
+	return info.ModTime(), nil
+}
+
 // convertHEICToJPEG shells out to the macOS `sips` tool and returns the path
 // of the temporary JPEG. The caller owns removing it.
 //

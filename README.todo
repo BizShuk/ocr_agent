@@ -1,5 +1,5 @@
 # TODO
 
 - [ ] 在 GitHub 建立 bizshuk/ocr_agent 並 push, 再於 ~/projects/tools 以 git submodule add 掛載
-- [ ] 以一張真實收據驗證 general / medical 在新設定下的輸出 (原 collections 的 "Verify receipt process")
-- [ ] pm2: 刪除舊的 classify-receipts / general-receipts / medical-receipts, 改載入 ~/projects/default/ecosystem.config.js
+- [x] 以一張真實收據驗證 general / medical 在新設定下的輸出 (原 collections 的 "Verify receipt process") — 2026-11-25 以 5 張真實收據驗證
+- [x] pm2: 刪除舊的 classify-receipts / general-receipts / medical-receipts, 改載入 ~/projects/default/ecosystem.config.js — 2026-11-25 確認 dump.json 只剩新的兩個 Category task

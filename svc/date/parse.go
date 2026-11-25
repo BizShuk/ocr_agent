@@ -4,11 +4,37 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
 // FIELD is the reply key a date task's prompt must fill.
 const FIELD = "date"
+
+// NA is what a model answers for a field the document does not carry.
+const NA = "N/A"
+
+// SOURCE_FIELD is the sidecar key recording where the filing date came
+// from, so a date read off the document can be told apart from one derived
+// from the photo's own timestamp.
+const SOURCE_FIELD = "date_source"
+
+// Where a filing date came from.
+const (
+	SOURCE_DOCUMENT   = "document"   // printed on the document
+	SOURCE_FILE_MTIME = "file_mtime" // the photo's own timestamp
+)
+
+// IsMissing reports whether value is the model's explicit "not on the
+// document" answer. A document that carries no date at all is filed under
+// the photo's own timestamp instead of failing.
+func IsMissing(value any) bool {
+	text, ok := value.(string)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(text), NA)
+}
 
 // ROC_EPOCH_OFFSET converts a Taiwan 民國 (Republic of China era) year to a
 // Gregorian year: 民國 115 + 1911 = 2026. Taiwan receipts and hospital slips

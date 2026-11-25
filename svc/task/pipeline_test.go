@@ -7,20 +7,30 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bizshuk/agentsdk/core"
 	"github.com/bizshuk/ocr_agent/svc/target"
 )
 
 // stubModel answers every request with calls, recording what it was sent.
+// An empty reply is returned when neither text nor a call is configured.
 type stubModel struct {
 	calls []core.ToolCall
 	text  string
 	seen  core.ModelRequest
+	// emptyReplies is how many leading requests get an empty reply before
+	// the model answers properly.
+	emptyReplies int
+	requests     int
 }
 
 func (s *stubModel) Generate(_ context.Context, req core.ModelRequest) (core.ModelResult, error) {
 	s.seen = req
+	s.requests++
+	if s.requests <= s.emptyReplies {
+		return core.ModelResult{}, nil
+	}
 	return core.ModelResult{Text: s.text, ToolCalls: s.calls}, nil
 }
 
@@ -62,7 +72,7 @@ func pipeline(t *testing.T, model core.Provider, typ, root string) Pipeline {
 // target is an enum of the task's target names.
 func TestRequestCarriesPromptImageAndMvTool(t *testing.T) {
 	source, root := stage(t)
-	model := &stubModel{}
+	model := &stubModel{calls: mvCall(map[string]any{"target": "archive", "metadata": map[string]any{"date": "2026-08-01"}})}
 	if _, err := pipeline(t, model, TYPE_DATE, root).Process(context.Background(), source, false); err != nil {
 		t.Fatal(err)
 	}
@@ -160,5 +170,84 @@ func TestImageStaysUnlessFiled(t *testing.T) {
 		if _, err := os.Stat(source); err != nil {
 			t.Errorf("%s: image must stay: %v", name, err)
 		}
+	}
+}
+
+// A document that prints no date at all is filed under the photo's own
+// timestamp, and the sidecar records where that day came from.
+func TestDateFallsBackToPhotoTimestamp(t *testing.T) {
+	source, root := stage(t)
+	stamp := time.Date(2026, time.September, 28, 9, 22, 0, 0, time.UTC)
+	if err := os.Chtimes(source, stamp, stamp); err != nil {
+		t.Fatal(err)
+	}
+	model := &stubModel{calls: mvCall(map[string]any{"target": "archive", "metadata": map[string]any{"date": "N/A", "merchant": "x"}})}
+	got, err := pipeline(t, model, TYPE_DATE, root).Process(context.Background(), source, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(root, "archive", "2026", "09", "IMG_1.jpg")
+	if !got.Filed || got.Destination != want {
+		t.Fatalf("got %+v, want %s", got, want)
+	}
+	raw, err := os.ReadFile(filepath.Join(root, "archive", "2026", "09", "IMG_1.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sidecar map[string]any
+	if err := json.Unmarshal(raw, &sidecar); err != nil {
+		t.Fatal(err)
+	}
+	if sidecar["date"] != "2026-09-28" || sidecar["date_source"] != "file_mtime" {
+		t.Fatalf("sidecar %v", sidecar)
+	}
+}
+
+// A date read off the document is recorded as such, so a reader can tell it
+// from one derived from the photo's timestamp.
+func TestSidecarRecordsDateSource(t *testing.T) {
+	source, root := stage(t)
+	model := &stubModel{calls: mvCall(map[string]any{"target": "archive", "metadata": map[string]any{"date": "2026-08-01"}})}
+	if _, err := pipeline(t, model, TYPE_DATE, root).Process(context.Background(), source, true); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(root, "archive", "2026", "08", "IMG_1.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sidecar map[string]any
+	if err := json.Unmarshal(raw, &sidecar); err != nil {
+		t.Fatal(err)
+	}
+	if sidecar["date_source"] != "document" {
+		t.Fatalf("sidecar %v", sidecar)
+	}
+}
+
+// A provider that answers with an empty body is asked again: the image is
+// filed rather than left in place with no reason.
+func TestEmptyReplyIsRetried(t *testing.T) {
+	source, root := stage(t)
+	model := &stubModel{calls: mvCall(map[string]any{"target": "archive", "metadata": map[string]any{"date": "2026-08-01"}}), emptyReplies: 2}
+	got, err := pipeline(t, model, TYPE_DATE, root).Process(context.Background(), source, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Filed || model.requests != 3 {
+		t.Fatalf("got %+v after %d requests, want a filed image after 3", got, model.requests)
+	}
+}
+
+// A provider that never answers leaves the image in place and fails the
+// image, rather than passing as a model that chose no target.
+func TestEmptyReplyEveryTimeFails(t *testing.T) {
+	source, root := stage(t)
+	model := &stubModel{emptyReplies: MAX_ATTEMPTS}
+	_, err := pipeline(t, model, TYPE_DATE, root).Process(context.Background(), source, false)
+	if err == nil || !strings.Contains(err.Error(), "empty reply") {
+		t.Fatalf("got %v, want an empty-reply error", err)
+	}
+	if _, err := os.Stat(source); err != nil {
+		t.Fatal("image must stay")
 	}
 }
